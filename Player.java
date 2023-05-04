@@ -1,60 +1,117 @@
 
 /**
- * Beschreiben Sie hier die Klasse Player.
+ * The player class.
+ * Saves the players IP, Port, Score and Name.
  * 
- * @author (Ihr Name) 
- * @version (eine Versionsnummer oder ein Datum)
+ * @author Johannes Olzem
+ * @version 0.1
  */
-public class Player
-{
-    // Instanzvariablen - ersetzen Sie das folgende Beispiel mit Ihren Variablen
+public class Player {
     private String ip;
     private int port;
+    private double score;
     private String name;
+    private boolean hasWon;
     private FlunkyServer server;
 
     /**
-     * Konstruktor für Objekte der Klasse Player
+     * Constructor of class Player
      */
     public Player(String pIP, int pPort, FlunkyServer pServer) {
         ip = pIP;
         port = pPort;
         server = pServer;
-        name = "Player" + Math.random()*1000;
+        name = "Player";
+        score = 0;
     }
 
     /**
-     * Gibt den Port des Spielers
+     * Returns port of player
      * 
-     * @return  die variable port
+     * @return  Port of the player
      */
     public int getPort() {
         return port;
     }
     
     /**
-     * Gibt die IP Adresse des Spielers
+     * Returns IP Address 
      * 
-     * @return  die variable IP
+     * @return  IP of the player
      */
     public String getIP() {
         return ip;
     }
     
     /**
-     * Sendet die gegebene Nachricht an den Spieler
+     * Sends {msg} to the player
      * 
-     * @param msg   Die Nachricht, die an den Spieler gesendet werden soll
+     * @param msg   The message being sent to the player
      */
     public void send(String msg) {
         server.send(ip, port, msg);
     }
     
+    /**
+     * Sets new name for player
+     * 
+     * @param pName The new name for the player
+     */
     public void setName(String pName) {
         name = pName;
     }
     
+    /**
+     * Returns the name of the player
+     * 
+     * @return  Name of the player
+     */
     public String getName() {
         return name;
+    }
+    
+    /**
+     * Sets the players score
+     * 
+     * @param pScore    The players new score
+     */
+    public void setScore(double pScore) {
+        score = pScore;
+    }
+    
+    /**
+     * Adds to the score of the player
+     * 
+     * @param   The amount being added to the score
+     */
+    public void addScore(double pAdd) {
+        score += pAdd;
+    }
+    
+    /**
+     * Returns the players score
+     * 
+     * @return  the players score
+     */
+    public double getScore() {
+        return score;
+    }
+    
+    /**
+     * returns true if the player has won
+     * 
+     * @return  true if the player has won, else false
+     */
+    public boolean hasWon() {
+        return hasWon;
+    }
+    
+    /**
+     * Sets if the player has won
+     * 
+     * @param pHasWon   if the player has won
+     */
+    public void hasWon(boolean pHasWon) {
+        hasWon = pHasWon;
     }
 }
