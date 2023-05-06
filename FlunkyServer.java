@@ -116,6 +116,8 @@ public class FlunkyServer extends Server {
      * @param msg   Message of sender
      */
     public void processMessage(String ip, int port, String msg) {
+        // do nothing if the message is empty
+        if(msg.equals("") || msg.equals("")) return;
         String[] cmd = msg.split(" ");
         String verb = cmd[0].toUpperCase();
         // remove first element in array
@@ -141,7 +143,10 @@ public class FlunkyServer extends Server {
             case "START": // START
                 if(player1 == null || player2 == null) send(ip, port, "401 Not enough players");
                 else if(player1.getName().equals("Player") || player2.getName().equals("Player")) send(ip, port, "302 Player Name(s) not changed");
-                else game(player1, player2);
+                // start game in new thread so the player who called start can interact
+                else new Thread(() -> {
+                        game(player1, player2); 
+                    }).start();
                 break;
             case "NAME": // NAME <playername>
                 if(gameStarted) return;
@@ -189,6 +194,9 @@ public class FlunkyServer extends Server {
         gameStarted = false;
     }
     
+    /**
+     * 
+     */
     public void move(Player p1, Player p2) {
         char keyToPress = keys[(int)(Math.random() * keys.length)];
         p1.send("102 " + keyToPress);
@@ -207,6 +215,7 @@ public class FlunkyServer extends Server {
         if(hasHit) {
             sendToAll(p1.getName() + " has hit the bottle"); // DEBUG
             
+            // generate random sequence of characters
             String charSequence = "";
             for (int i = 0; i < (int)(Math.random() * MAX_CHARS + MIN_CHARS); i++)
                 charSequence += keys[(int)(Math.random() * keys.length)];
@@ -215,6 +224,7 @@ public class FlunkyServer extends Server {
             while(p1.getScore() < 100.0) {
                 if(submittedString.toUpperCase().equals(charSequence))
                     break;
+                System.out.println(submittedString); // DEBUG
                 p1.addScore(SCORE_TO_ADD);
                 System.out.println("drinking dude score: " + p1.getScore()); // DEBUG
                 sleep(100);
