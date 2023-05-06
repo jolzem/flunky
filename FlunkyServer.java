@@ -47,7 +47,7 @@ public class FlunkyServer extends Server {
     private static int MIN_CHARS = 4;
     private static int MAX_CHARS = 6;
     private static double SCORE_TO_ADD = 0.5;
-    private static int TIME_TO_SUBMIT = 5000;
+    private static int TIME_TO_SUBMIT = 5000; // TODO change to a sensible number
     
     private Player player1;
     private Player player2;
@@ -59,7 +59,7 @@ public class FlunkyServer extends Server {
      * Constructor of class FlunkyServer
      */
     public FlunkyServer() {
-        super(2400);
+        super(2400); // Start server on port 2400
     }
 
     /**
@@ -109,7 +109,7 @@ public class FlunkyServer extends Server {
      *  - START: starts the game by calling the game() method
      *  - NAME: <playername>: player can change their name if the game hasn't started
      *  - SUBMIT: submit the asked character or string
-     *  - RESTART: cleans everything from previous game and calls game()
+     *  - RESET: cleans everything from previous game
      *
      * @param ip    IP of sender
      * @param port  Port of sender
@@ -141,6 +141,7 @@ public class FlunkyServer extends Server {
                 }
                 break;
             case "START": // START
+                if(gameStarted) return;
                 if(player1 == null || player2 == null) send(ip, port, "401 Not enough players");
                 else if(player1.getName().equals("Player") || player2.getName().equals("Player")) send(ip, port, "302 Player Name(s) not changed");
                 // start game in new thread so the player who called start can interact
@@ -156,9 +157,8 @@ public class FlunkyServer extends Server {
             case "SUBMIT": // SUBMIT <string>
                 submittedString = args[0];
                 break;
-            case "RESTART": // RESTART
+            case "RESET": // RESET
                 reset();
-                game(player1, player2);
                 break;
             default:
                 send(ip, port, "400 Bad request");
@@ -166,36 +166,43 @@ public class FlunkyServer extends Server {
     }
 
     /**
-     *
+     * While no one has won, calls the move() method with alternating first player.
+     * Also sets results after the game has ended.
+     * 
+     * @param p1    The first player
+     * @param p2    The second player
      */
     public void game(Player p1, Player p2) {
         gameStarted = true;
         boolean player1isThrowingPlayer = true;
         sendToAll("101 Game Started");
         
+        // while no one has won
         while(player1.getScore() < 100.0 && player2.getScore() < 100.0) {
             if(player1isThrowingPlayer) move(p1, p2);
             else move(p2, p1);
             
             player1isThrowingPlayer = !player1isThrowingPlayer; // swap throwing player
             
-            sendToAll(p1.getName() + " score: " + p1.getScore()); // DEBUG
-            sendToAll(p2.getName() + " score: " + p2.getScore()); // DEBUG
+            // sendToAll(p1.getName() + " score: " + p1.getScore()); // DEBUG
+            // sendToAll(p2.getName() + " score: " + p2.getScore()); // DEBUG
         }
         
-        if(p1.getScore() > p2.getScore()) {
-            p1.hasWon(true);
-            sendToAll(p1.getName() + " has won!"); // DEBUG
-        } else {
-            p2.hasWon(true);
-            sendToAll(p2.getName() + " has won!"); // DEBUG
-        }
+        if(p1.getScore() > p2.getScore()) p1.hasWon(true);
+        else p2.hasWon(true);
         
         gameStarted = false;
     }
     
     /**
+     * The method for each round.
+     * Gives p1 a single letter prompt, which they have to submit within TIME_TO_SUBMIT 
+     * milliseconds. If this is the case, the other player will get a prompt to submit
+     * multiple letters while the first player is gaining points. The longer the other
+     * player takes to submit the string, the more points p1 will get.
      * 
+     * @param p1    The first player
+     * @param p2    The second player
      */
     public void move(Player p1, Player p2) {
         char keyToPress = keys[(int)(Math.random() * keys.length)];
@@ -207,13 +214,14 @@ public class FlunkyServer extends Server {
             if(submittedString.toUpperCase().equals(keyToPress+"")) {
                 hasHit = true;
                 submittedString = "";
+                p1.send("204 Correct input");
                 break;
             }
             sleep(100);
         }
         
         if(hasHit) {
-            sendToAll(p1.getName() + " has hit the bottle"); // DEBUG
+            sendToAll("203 Target hit");
             
             // generate random sequence of characters
             String charSequence = "";
@@ -221,12 +229,17 @@ public class FlunkyServer extends Server {
                 charSequence += keys[(int)(Math.random() * keys.length)];
                 
             p2.send("102 " + charSequence);
+            // until p1 has won
             while(p1.getScore() < 100.0) {
-                if(submittedString.toUpperCase().equals(charSequence))
+                // when correct input was provided
+                if(submittedString.toUpperCase().equals(charSequence)) {
+                    p2.send("204 Correct input");
                     break;
-                System.out.println(submittedString); // DEBUG
+                }
+
+                // System.out.println(submittedString); // DEBUG
                 p1.addScore(SCORE_TO_ADD);
-                System.out.println("drinking dude score: " + p1.getScore()); // DEBUG
+                // System.out.println("drinking dude score: " + p1.getScore()); // DEBUG
                 sleep(100);
             }
             submittedString = "";
@@ -234,7 +247,7 @@ public class FlunkyServer extends Server {
     }
     
     /**
-     * Resets the stats of both players
+     * Resets attributes of both players
      */
     public void reset() {
         player1.setName("Player");
