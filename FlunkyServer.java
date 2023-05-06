@@ -87,11 +87,8 @@ public class FlunkyServer extends Server {
      * @param port  Port of sender
      */
     public void processClosingConnection(String ip, int port) {
-        try {
-            if(player1.getIP().equals(ip) && player1.getPort() == port) player1 = null;
-            else if(player2.getIP().equals(ip) && player2.getPort() == port) player2 = null;
-        // when both users log off, a nullpointer exception occurs
-        } catch(java.lang.NullPointerException e) {}
+        if(player1 != null && player1.getIP().equals(ip) && player1.getPort() == port) player1 = null;
+        else if(player2 != null && player2.getIP().equals(ip) && player2.getPort() == port) player2 = null;
     }
 
     public void processOpeningConnection(String ip, int port) {}
