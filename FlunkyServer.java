@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
  * - 104 {String} Winner
  * - 105 {String} Loser
  * - 106 {String} {String} (Player Names)
+ * - 107 {String} (Enemy Name)
  *
  * 2XX Success:
  * - 200 Successfull Command (Default)
@@ -48,7 +49,7 @@ public class FlunkyServer extends Server {
     private static int MIN_CHARS = 4;
     private static int MAX_CHARS = 6;
     private static double SCORE_TO_ADD = 0.5;
-    private static int TIME_TO_SUBMIT = 5000; // TODO change to a sensible number
+    private static int TIME_TO_SUBMIT = 1200;
     
     private Player player1;
     private Player player2;
@@ -82,7 +83,7 @@ public class FlunkyServer extends Server {
     }
 
     /**
-     * Removes assignment from player, when a client disconnects
+     * Removes assignment from player, when a client disconnects.
      *
      * @param ip    IP of sender
      * @param port  Port of sender
@@ -101,6 +102,7 @@ public class FlunkyServer extends Server {
      *    - READY: returns 100 if the game is ready, otherwise a
      *      corresponding error
      *    - NAMES: returns 106 with both player names
+     *    - NAME: returns 107 with the other players name
      *    - SCORE: returns 103 <score>
      *    - OUTCOME <playername>: returns 104 if <playername> has won, 
      *      105 if <playername> has lost and 404 if <playername> wasn't
@@ -124,7 +126,7 @@ public class FlunkyServer extends Server {
 
         switch(verb) {
             case "INFO": // INFO <command>
-                switch(args[0]) {
+                switch(args[0].toUpperCase()) {
                     case "READY": // INFO READY
                         if(player1 == null || player2 == null) send(ip, port, "401 Not enough Players");
                         else if(player1.getName().equals("Player") || player2.getName().equals("Player")) send(ip, port, "302 Player Name(s) not changed");
@@ -135,6 +137,15 @@ public class FlunkyServer extends Server {
                         else if(player1.getName().equals("Player") || player2.getName().equals("Player")) send(ip, port, "302 Player Name(s) not changed");
                         else send(ip, port, "106 " + player1.getName() + " " + player2.getName());
                         break;
+                    case "NAME":
+                        if(player1 == null || player2 == null) send(ip, port, "401 Not enough Players");
+                        else if(player1.getName().equals("Player") || player2.getName().equals("Player")) send(ip, port, "302 Player Name(s) not changed");
+                        // p1 is requesting
+                        else if(player1.getIP().equals(ip) && player1.getPort() == port) send(ip, port, "107 " + player2.getName());
+                        // p2 is requesting
+                        else if(player2.getIP().equals(ip) && player2.getPort() == port) send(ip, port, "107 " + player1.getName());
+                        else send(ip, port, "404 Player not found");
+                        break;
                     case "SCORE":
                         if(player1 == null || player2 == null) send(ip, port, "401 Not enough Players");
                         else if(player1.getName().equals("Player") || player2.getName().equals("Player")) send(ip, port, "302 Player Name(s) not changed");
@@ -143,10 +154,10 @@ public class FlunkyServer extends Server {
                         else send(ip, port, "404 Player not found");
                         break;  
                     case "OUTCOME": // INFO OUTCOME <playername>
-                        if(player1.getName().equals(args[1]))
+                        if(player1 != null && player1.getName().equals(args[1]))
                             if(player1.hasWon()) send(ip, port, "104 " + player1.getName() + " Winner");
                             else send(ip, port, "105 " + player1.getName() + " Loser");
-                        else if(player2.getName().equals(args[1]))
+                        else if(player2 != null && player2.getName().equals(args[1]))
                             if(player2.hasWon()) send(ip, port, "104 " + player2.getName() + " Winner");
                             else send(ip, port, "105 " + player2.getName() + " Loser");
                         else send(ip, port, "404 Player not found");
@@ -191,21 +202,18 @@ public class FlunkyServer extends Server {
         sendToAll("101 Game Started");
         
         // while no one has won
-        while(player1.getScore() < 100.0 && player2.getScore() < 100.0) {
+        while(playersConnected() && player1.getScore() < 100.0 && player2.getScore() < 100.0) {
             if(player1isThrowingPlayer) move(p1, p2);
             else move(p2, p1);
             
             player1isThrowingPlayer = !player1isThrowingPlayer; // swap throwing player
-            
-            // sendToAll(p1.getName() + " score: " + p1.getScore()); // DEBUG
-            // sendToAll(p2.getName() + " score: " + p2.getScore()); // DEBUG
         }
         
-        if(p1.getScore() > p2.getScore()) {
+        if(playersConnected() && p1.getScore() > p2.getScore()) {
             p1.hasWon(true);
             sendToAll("104 " + p1.getName() + " Winner");
         }
-        else {
+        else if(playersConnected()) {
             p2.hasWon(true);
             sendToAll("104 " + p2.getName() + " Winner");
         }
@@ -269,12 +277,19 @@ public class FlunkyServer extends Server {
      * Resets attributes of both players
      */
     public void reset() {
-        player1.setName("Player");
-        player2.setName("Player");
-        player1.setScore(0);
-        player2.setScore(0);
-        player1.hasWon(false);
-        player2.hasWon(false);
+        if(player1 != null) {
+            player1.setName("Player");
+            player1.setScore(0);
+            player1.hasWon(false);
+        } if(player2 != null) {
+            player2.setName("Player");
+            player2.setScore(0);
+            player2.hasWon(false);
+        }
+    }
+    
+    public boolean playersConnected() {
+        return player1 != null && player2 != null;
     }
     
     /**

@@ -31,16 +31,20 @@ public class FlunkyGUI extends JFrame implements KeyListener {
 
     // Program attributes
     private FlunkyClient client;
-    private boolean atLogin = true;
     private boolean isPickingUp = false;
-    private int p1scoreY = 100;
-    private int p1scoreHeight;
-    private int p2scoreY = 100;
-    private int p2scoreHeight;
+    private int p1scoreY = 56;
+    private int p1scoreHeight = 300;
+    private int p2scoreY = 56;
+    private int p2scoreHeight = 300;
     private double score = 0.0;
     private double enemyScore = 0.0;
     private boolean gameOngoing = false;
+    private String p1name;
+    private String p2name;
 
+    /**
+     * Constructor for objects of class FlunkyGUI
+     */
     public FlunkyGUI() {
         // frame init
         super();
@@ -63,12 +67,13 @@ public class FlunkyGUI extends JFrame implements KeyListener {
         lFlunky1.setFont(new Font("Dialog", Font.BOLD, 24));
         cp.add(lFlunky1);
         tfIP.setBounds(353, 216, 128, 24);
-        tfIP.setText("192.168.178.85"); // DEBUG
+        // tfIP.setText("192.168.178.85"); // DEBUG
         cp.add(tfIP);
         lIP.setBounds(320, 216, 40, 24);
         lIP.setText("IP");
         cp.add(lIP);
         tfName.setBounds(353, 248, 128, 24);
+        // tfName.addKeyListener(this);
         cp.add(tfName);
         lName.setBounds(310, 248, 40 ,24);
         lName.setText("Name");
@@ -110,12 +115,13 @@ public class FlunkyGUI extends JFrame implements KeyListener {
         p1score.setBackground(Color.BLACK);
         p1score.setVisible(false);
         cp.add(p1score);
-        p2score.setBounds(768, p2scoreY, 24, p2scoreHeight);
+        p2score.setBounds(750, p2scoreY, 24, p2scoreHeight);
         p2score.setBackground(Color.BLACK);
         p2score.setVisible(false);
-        cp.add(p1score);
+        cp.add(p2score);
         tfInput.setBounds(176, 504, 296, 32);
         tfInput.setVisible(false);
+        tfInput.addKeyListener(this);
         cp.add(tfInput);
         bSubmit1.setBounds(488, 504, 152, 32);
         bSubmit1.setText("Submit");
@@ -131,6 +137,7 @@ public class FlunkyGUI extends JFrame implements KeyListener {
         lInfo.setText("");
         lInfo.setVisible(false);
         lInfo.setHorizontalAlignment(JTextField.CENTER); // align center
+        lInfo.setFont(new Font("Dialog", Font.BOLD, 16));
         cp.add(lInfo);
 
         setVisible(true);
@@ -155,7 +162,6 @@ public class FlunkyGUI extends JFrame implements KeyListener {
         if(!client.isConnected()) return;
         
         bConnect1.setVisible(false);
-        tfIP.setText("");
         tfIP.setVisible(false);
         lIP.setVisible(false);
         tfName.setVisible(false);
@@ -167,10 +173,10 @@ public class FlunkyGUI extends JFrame implements KeyListener {
         bSubmit1.setVisible(true);
         lInfo.setVisible(true);
         
-        atLogin = false;
-        
         sleep(10);
         client.send("NAME " + tfName.getText());
+        // System.out.println("NAME " + tfName.getText()); // DEBUG
+        p1name = tfName.getText();
     }
 
     /**
@@ -190,8 +196,8 @@ public class FlunkyGUI extends JFrame implements KeyListener {
         tfInput.setVisible(false);
         bSubmit1.setVisible(false);
         lInfo.setVisible(false);
-        
-        atLogin = true;
+        p1score.setVisible(false);
+        p2score.setVisible(false);
         
         client.close(); // close connection
         client = null;
@@ -202,7 +208,8 @@ public class FlunkyGUI extends JFrame implements KeyListener {
      * the focus switches to tfInput
      */
     public void bStart_ActionPerformed(ActionEvent evt) {
-        client.send("START");
+        if(connected()) client.send("START");
+        // System.out.println("START"); // DEBUG
         tfInput.requestFocusInWindow(); // focus on tfInput
     }
 
@@ -212,44 +219,59 @@ public class FlunkyGUI extends JFrame implements KeyListener {
      * Afterwards tfInput is cleared.
      */
     public void bSubmit1_ActionPerformed(ActionEvent evt) {
-        if(tfInput.getText().equals("")) return;
+        if(tfInput.getText().equals("") || !connected()) return;
         client.send("SUBMIT " + tfInput.getText());
+        // System.out.println("SUBMIT " + tfInput.getText()); // DEBUG
         tfInput.setText("");
     }
     
     /**
-     * If user presses Enter, connect when on login and submit when in game.
+     * If user presses Enter, submit.
      */
     public void keyReleased(KeyEvent e) {
-        if(e.getKeyCode() == KeyEvent.VK_ENTER) {
-            if(atLogin) bConnect1_ActionPerformed(null);
-            else bSubmit1_ActionPerformed(null);
-        }
+        if(e.getKeyCode() == KeyEvent.VK_ENTER) bSubmit1_ActionPerformed(null);
     }
     
     public void keyPressed(KeyEvent e) {}
     public void keyTyped(KeyEvent e) {}
     
+    /**
+     * This method is called as soon as the game starts. It handles the scorebars on the
+     * sides by continously asking for the score of the currently scoring player and refreshing
+     * the position and height of the bar.
+     */
     public void refreshScore() {
         p1score.setVisible(true);
         p2score.setVisible(true);
-        while(gameOngoing) {
+        client.send("INFO NAME"); // ask for enemy player name
+        // System.out.println("INFO NAME"); // DEBUG
+        while(gameOngoing && connected()) {
             if(isPickingUp) {
-                p2scoreY = (int)(enemyScore * 3 + 56.0);
-                p2scoreHeight = (int)(enemyScore * 3.0);
-                p2score.setBounds(768, p2scoreY, 24, p2scoreHeight);
+                // refresh p2 score
+                client.askForP1(false);
+                client.send("INFO SCORE " + p2name);
+                // System.out.println("INFO SCORE " + p2name); // DEBUG
+
+                p2scoreY = (int)(enemyScore * 3 + 56);
+                p2scoreHeight = (int)((enemyScore - 100) * -3.0);
+                p2score.setBounds(750, p2scoreY, 24, p2scoreHeight);
             } else {
-                p1scoreY = (int)(score * 3 + 56.0);
-                p1scoreHeight = (int)(score * 3.0);
+                // refresh p1 score (own score)
+                client.askForP1(true);
+                client.send("INFO SCORE " + p1name);
+                // System.out.println("INFO SCORE " + p1name); // DEBUG
+
+                p1scoreY = (int)(score * 3 + 56);
+                p1scoreHeight = (int)((score - 100) * -3.0);
                 p1score.setBounds(8, p1scoreY, 24, p1scoreHeight);
             }
             sleep(70);
         }
     }
-    
+
     /**
      * Waits for a given amount of milliseconds
-     * 
+     *
      * @param millis    the milliseconds that should be waited
      */
     public void sleep(int millis) {
@@ -257,16 +279,59 @@ public class FlunkyGUI extends JFrame implements KeyListener {
             TimeUnit.MILLISECONDS.sleep(millis);
         } catch(java.lang.InterruptedException e) {}
     }
-    
+
+    /**
+     * Set the score of the local player
+     *
+     * @param score The score to be set.
+     */
     public void setScore(double score) {
         this.score = score;
     }
-    
+
+    /**
+     * Sets the score of the enemy player.
+     *
+     * @param score The score to be set.
+     */
     public void setEnemyScore(double score) {
         this.enemyScore = score;
     }
-    
+
+    /**
+     * Sets the name of the enemy player.
+     *
+     * @param name  The name to be set.
+     */
+    public void setP2Name(String name) {
+        this.p2name = name;
+    }
+
+    /**
+     * Sets if the game is still going on. It also enables/disables the start button accordingly
+     *
+     * @param value If the game is still going on
+     */
     public void gameOngoing(boolean value) {
         this.gameOngoing = value;
+        bStart.setEnabled(!value);
+    }
+
+    /**
+     * Sets if the local player is currently picking up the fallen target.
+     *
+     * @param value The value to be set
+     */
+    public void isPickingUp(boolean value) {
+        this.isPickingUp = value;
+    }
+
+    /**
+     * Returns true if the client can be accessed to avoid NullPointerExceptions
+     *
+     * @return true if the client can be accessed, else false
+     */
+    public boolean connected() {
+        return client != null;
     }
 }

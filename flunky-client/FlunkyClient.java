@@ -7,6 +7,7 @@
 public class FlunkyClient extends Client {
     private FlunkyGUI gui;
     private boolean askedForP1;
+
     /**
      * Constructor for objects of class FlunkyClient
      */
@@ -14,7 +15,7 @@ public class FlunkyClient extends Client {
         super(ip, 2400); // connect to ip on port 2400
         this.gui = gui;
     }
-    
+
     public void processMessage(String msg) {
         int code = Integer.parseInt(msg.split(" ")[0]);
         switch(code) {
@@ -26,6 +27,8 @@ public class FlunkyClient extends Client {
                 break;
             case 102:
                 gui.lInfo.setText("Type: " + msg.split(" ")[1]);
+                if(msg.split(" ")[1].length() < 2) gui.isPickingUp(false);
+                else gui.isPickingUp(true);
                 break;
             case 103:
                 if(askedForP1) gui.setScore(Double.parseDouble(msg.split(" ")[1]));
@@ -33,6 +36,9 @@ public class FlunkyClient extends Client {
                 break;
             case 104:
                 gui.gameOngoing(false);
+                break;
+            case 107:
+                gui.setP2Name(msg.split(" ")[1]);
                 break;
             case 301:
                 gui.bDisconnect1_ActionPerformed(null);
@@ -46,7 +52,7 @@ public class FlunkyClient extends Client {
                 gui.lInfo.setText(info);
         }
     }
-    
+
     public void askForP1(boolean value) {
         this.askedForP1 = value;
     }
