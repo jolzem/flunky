@@ -50,7 +50,7 @@ public class FlunkyServer extends Server {
     private static int MAX_CHARS = 6;
     private static double SCORE_TO_ADD = 0.5;
     private static int TIME_TO_SUBMIT = 1200;
-    
+
     private Player player1;
     private Player player2;
     private char[] keys = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
@@ -62,6 +62,10 @@ public class FlunkyServer extends Server {
      */
     public FlunkyServer() {
         super(2400); // Start server on port 2400
+    }
+
+    public static void main(String args[]) {
+        new FlunkyServer();
     }
 
     /**
@@ -104,7 +108,7 @@ public class FlunkyServer extends Server {
      *    - NAMES: returns 106 with both player names
      *    - NAME: returns 107 with the other players name
      *    - SCORE: returns 103 <score>
-     *    - OUTCOME <playername>: returns 104 if <playername> has won, 
+     *    - OUTCOME <playername>: returns 104 if <playername> has won,
      *      105 if <playername> has lost and 404 if <playername> wasn't
      *      found
      *  - START: starts the game by calling the game() method
@@ -152,7 +156,7 @@ public class FlunkyServer extends Server {
                         else if(player1.getName().equals(args[1])) send(ip, port, "103 " + player1.getScore());
                         else if(player2.getName().equals(args[1])) send(ip, port, "103 " + player2.getScore());
                         else send(ip, port, "404 Player not found");
-                        break;  
+                        break;
                     case "OUTCOME": // INFO OUTCOME <playername>
                         if(player1 != null && player1.getName().equals(args[1]))
                             if(player1.hasWon()) send(ip, port, "104 " + player1.getName() + " Winner");
@@ -170,7 +174,7 @@ public class FlunkyServer extends Server {
                 else if(player1.getName().equals("Player") || player2.getName().equals("Player")) send(ip, port, "302 Player Name(s) not changed");
                 // start game in new thread so the player who called start can interact
                 else new Thread(() -> {
-                        game(player1, player2); 
+                        game(player1, player2);
                     }).start();
                 break;
             case "NAME": // NAME <playername>
@@ -192,7 +196,7 @@ public class FlunkyServer extends Server {
     /**
      * While no one has won, calls the move() method with alternating first player.
      * Also sets results after the game has ended.
-     * 
+     *
      * @param p1    The first player
      * @param p2    The second player
      */
@@ -200,15 +204,15 @@ public class FlunkyServer extends Server {
         gameStarted = true;
         boolean player1isThrowingPlayer = true;
         sendToAll("101 Game Started");
-        
+
         // while no one has won
         while(playersConnected() && player1.getScore() < 100.0 && player2.getScore() < 100.0) {
             if(player1isThrowingPlayer) move(p1, p2);
             else move(p2, p1);
-            
+
             player1isThrowingPlayer = !player1isThrowingPlayer; // swap throwing player
         }
-        
+
         if(playersConnected() && p1.getScore() > p2.getScore()) {
             p1.hasWon(true);
             sendToAll("104 " + p1.getName() + " Winner");
@@ -217,24 +221,24 @@ public class FlunkyServer extends Server {
             p2.hasWon(true);
             sendToAll("104 " + p2.getName() + " Winner");
         }
-        
+
         gameStarted = false;
     }
-    
+
     /**
      * The method for each round.
-     * Gives p1 a single letter prompt, which they have to submit within TIME_TO_SUBMIT 
+     * Gives p1 a single letter prompt, which they have to submit within TIME_TO_SUBMIT
      * milliseconds. If this is the case, the other player will get a prompt to submit
      * multiple letters while the first player is gaining points. The longer the other
      * player takes to submit the string, the more points p1 will get.
-     * 
+     *
      * @param p1    The first player
      * @param p2    The second player
      */
     public void move(Player p1, Player p2) {
         char keyToPress = keys[(int)(Math.random() * keys.length)];
         p1.send("102 " + keyToPress);
-        
+
         boolean hasHit = false;
         long submitTime = System.currentTimeMillis() + TIME_TO_SUBMIT;
         while(System.currentTimeMillis() < submitTime) {
@@ -246,15 +250,15 @@ public class FlunkyServer extends Server {
             }
             sleep(100);
         }
-        
+
         if(hasHit) {
             sendToAll("203 Target hit");
-            
+
             // generate random sequence of characters
             String charSequence = "";
             for (int i = 0; i < (int)(Math.random() * MAX_CHARS + MIN_CHARS); i++)
                 charSequence += keys[(int)(Math.random() * keys.length)];
-                
+
             p2.send("102 " + charSequence);
             // until p1 has won
             while(p1.getScore() < 100.0) {
@@ -272,7 +276,7 @@ public class FlunkyServer extends Server {
             submittedString = "";
         }
     }
-    
+
     /**
      * Resets attributes of both players
      */
@@ -287,14 +291,14 @@ public class FlunkyServer extends Server {
             player2.hasWon(false);
         }
     }
-    
+
     public boolean playersConnected() {
         return player1 != null && player2 != null;
     }
-    
+
     /**
      * Waits for a given amount of milliseconds
-     * 
+     *
      * @param millis    the milliseconds that should be waited
      */
     public void sleep(int millis) {
