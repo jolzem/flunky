@@ -25,3 +25,6 @@ replay_pid*
 
 # precompiled docs
 doc/
+
+# graphics
+flunky-client/img/

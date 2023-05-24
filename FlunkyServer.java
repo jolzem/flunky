@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
  * - 107 {String} (Enemy Name)
  *
  * 2XX Success:
- * - 200 Successfull Command (Default)
+ * - 200 Successful Command (Default)
  * - 201 Connected
  * - 203 Target hit
  * - 204 Correct input
@@ -33,6 +33,7 @@ import java.util.concurrent.TimeUnit;
  * 3XX Additional Actions required:
  * - 301 Session full
  * - 302 Player name(s) not changed
+ * - 303 Enemy has hit
  *
  * 4XX Client Error:
  * - 400 Bad request
@@ -48,12 +49,13 @@ import java.util.concurrent.TimeUnit;
 public class FlunkyServer extends Server {
     private static int MIN_CHARS = 4;
     private static int MAX_CHARS = 6;
-    private static double SCORE_TO_ADD = 0.5;
-    private static int TIME_TO_SUBMIT = 1200;
+    private static double SCORE_TO_ADD = 0.4;
+    private static int TIME_TO_SUBMIT = 1500;
 
     private Player player1;
     private Player player2;
     private char[] keys = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
+    private String[] words = {"word1", "word2"};
     private boolean gameStarted = false;
     private String submittedString = "";
 
@@ -87,7 +89,7 @@ public class FlunkyServer extends Server {
     }
 
     /**
-     * Removes assignment from player, when a client disconnects.
+     * Removes assignment from player, when a client disconnects. Also resets stats
      *
      * @param ip    IP of sender
      * @param port  Port of sender
@@ -95,6 +97,7 @@ public class FlunkyServer extends Server {
     public void processClosingConnection(String ip, int port) {
         if(player1 != null && player1.getIP().equals(ip) && player1.getPort() == port) player1 = null;
         else if(player2 != null && player2.getIP().equals(ip) && player2.getPort() == port) player2 = null;
+        reset(false);
     }
 
     public void processOpeningConnection(String ip, int port) {}
@@ -133,17 +136,17 @@ public class FlunkyServer extends Server {
                 switch(args[0].toUpperCase()) {
                     case "READY": // INFO READY
                         if(player1 == null || player2 == null) send(ip, port, "401 Not enough Players");
-                        else if(player1.getName().equals("Player") || player2.getName().equals("Player")) send(ip, port, "302 Player Name(s) not changed");
+                        else if(player1.getName().equals(player2.getName())) send(ip, port, "302 Player Name(s) not changed");
                         else send(ip, port, "100 Game ready");
                         break;
                     case "NAMES":
                         if(player1 == null || player2 == null) send(ip, port, "401 Not enough Players");
-                        else if(player1.getName().equals("Player") || player2.getName().equals("Player")) send(ip, port, "302 Player Name(s) not changed");
+                        else if(player1.getName().equals(player2.getName())) send(ip, port, "302 Player Name(s) not changed");
                         else send(ip, port, "106 " + player1.getName() + " " + player2.getName());
                         break;
                     case "NAME":
                         if(player1 == null || player2 == null) send(ip, port, "401 Not enough Players");
-                        else if(player1.getName().equals("Player") || player2.getName().equals("Player")) send(ip, port, "302 Player Name(s) not changed");
+                        else if(player1.getName().equals(player2.getName())) send(ip, port, "302 Player Name(s) not changed");
                         // p1 is requesting
                         else if(player1.getIP().equals(ip) && player1.getPort() == port) send(ip, port, "107 " + player2.getName());
                         // p2 is requesting
@@ -152,7 +155,7 @@ public class FlunkyServer extends Server {
                         break;
                     case "SCORE":
                         if(player1 == null || player2 == null) send(ip, port, "401 Not enough Players");
-                        else if(player1.getName().equals("Player") || player2.getName().equals("Player")) send(ip, port, "302 Player Name(s) not changed");
+                        else if(player1.getName().equals(player2.getName())) send(ip, port, "302 Player Name(s) not changed");
                         else if(player1.getName().equals(args[1])) send(ip, port, "103 " + player1.getScore());
                         else if(player2.getName().equals(args[1])) send(ip, port, "103 " + player2.getScore());
                         else send(ip, port, "404 Player not found");
@@ -171,7 +174,7 @@ public class FlunkyServer extends Server {
             case "START": // START
                 if(gameStarted) return;
                 if(player1 == null || player2 == null) send(ip, port, "401 Not enough players");
-                else if(player1.getName().equals("Player") || player2.getName().equals("Player")) send(ip, port, "302 Player Name(s) not changed");
+                else if(player1.getName().equals(player2.getName())) send(ip, port, "302 Player Name(s) not changed");
                 // start game in new thread so the player who called start can interact
                 else new Thread(() -> {
                         game(player1, player2);
@@ -179,14 +182,14 @@ public class FlunkyServer extends Server {
                 break;
             case "NAME": // NAME <playername>
                 if(gameStarted) return;
-                if(player1.getIP().equals(ip) && player1.getPort() == port) player1.setName(msg.split(" ")[1]);
-                else if(player2.getIP().equals(ip) && player2.getPort() == port) player2.setName(msg.split(" ")[1]);
+                if(player1 != null && player1.getIP().equals(ip) && player1.getPort() == port) player1.setName(msg.split(" ")[1]);
+                else if(player2 != null && player2.getIP().equals(ip) && player2.getPort() == port) player2.setName(msg.split(" ")[1]);
                 break;
             case "SUBMIT": // SUBMIT <string>
                 submittedString = args[0];
                 break;
             case "RESET": // RESET
-                reset();
+                reset(true);
                 break;
             default:
                 send(ip, port, "400 Bad request");
@@ -229,8 +232,8 @@ public class FlunkyServer extends Server {
      * The method for each round.
      * Gives p1 a single letter prompt, which they have to submit within TIME_TO_SUBMIT
      * milliseconds. If this is the case, the other player will get a prompt to submit
-     * multiple letters while the first player is gaining points. The longer the other
-     * player takes to submit the string, the more points p1 will get.
+     * a word while the first player is gaining points. The longer p2 takes to submit 
+     * the string, the more points p1 will get.
      *
      * @param p1    The first player
      * @param p2    The second player
@@ -246,47 +249,52 @@ public class FlunkyServer extends Server {
                 hasHit = true;
                 submittedString = "";
                 p1.send("204 Correct input");
+                p2.send("303 Enemy has hit");
+                sleep(5); // so 303 isnt immeadiatly followed by 203
                 break;
             }
             sleep(100);
         }
 
-        if(hasHit) {
-            sendToAll("203 Target hit");
-
-            // generate random sequence of characters
-            String charSequence = "";
-            for (int i = 0; i < (int)(Math.random() * MAX_CHARS + MIN_CHARS); i++)
-                charSequence += keys[(int)(Math.random() * keys.length)];
-
-            p2.send("102 " + charSequence);
-            // until p1 has won
-            while(p1.getScore() < 100.0) {
-                // when correct input was provided
-                if(submittedString.toUpperCase().equals(charSequence)) {
-                    p2.send("204 Correct input");
-                    break;
-                }
-
-                // System.out.println(submittedString); // DEBUG
-                p1.addScore(SCORE_TO_ADD);
-                // System.out.println("drinking dude score: " + p1.getScore()); // DEBUG
-                sleep(100);
-            }
-            submittedString = "";
+        if(!hasHit) {
+            p1.send("402 Target not hit");
+            return;
         }
+    
+        sendToAll("203 Target hit");
+
+        // find random word
+        String charSequence = words[(int)(Math.random() * words.length)];
+
+        p2.send("102 " + charSequence);
+        // until p1 has won
+        while(p1.getScore() < 100.0) {
+            // when correct input was provided
+            if(submittedString.toUpperCase().equals(charSequence.toUpperCase())) {
+                p2.send("204 Correct input");
+                break;
+            }
+
+            // System.out.println(submittedString); // DEBUG
+            p1.addScore(SCORE_TO_ADD);
+            // System.out.println("drinking dude score: " + p1.getScore()); // DEBUG
+            sleep(100);
+        }
+        submittedString = "";
     }
 
     /**
-     * Resets attributes of both players
+     * Resets attributes of both players. 
+     * 
+     * @param changeName    if set to true, player names will also get reset
      */
-    public void reset() {
+    public void reset(boolean changeName) {
         if(player1 != null) {
-            player1.setName("Player");
+            if(changeName) player1.setName("Player");
             player1.setScore(0);
             player1.hasWon(false);
         } if(player2 != null) {
-            player2.setName("Player");
+            if(changeName) player2.setName("Player");
             player2.setScore(0);
             player2.hasWon(false);
         }

@@ -19,6 +19,8 @@ public class FlunkyGUI extends JFrame implements KeyListener {
     private JTextField tfName = new JTextField();
     private JLabel lIP = new JLabel();
     private JLabel lName = new JLabel();
+    private JLabel lP1Name = new JLabel();
+    private JLabel lP2Name = new JLabel();
     private JButton bConnect1 = new JButton();
     private JButton bStart = new JButton();
     private JButton bDisconnect1 = new JButton();
@@ -67,13 +69,13 @@ public class FlunkyGUI extends JFrame implements KeyListener {
         lFlunky1.setFont(new Font("Dialog", Font.BOLD, 24));
         cp.add(lFlunky1);
         tfIP.setBounds(353, 216, 128, 24);
-        // tfIP.setText("192.168.178.85"); // DEBUG
+        tfIP.setText("192.168.178.85"); // DEBUG
         cp.add(tfIP);
         lIP.setBounds(320, 216, 40, 24);
         lIP.setText("IP");
         cp.add(lIP);
         tfName.setBounds(353, 248, 128, 24);
-        // tfName.addKeyListener(this);
+        tfName.setText("test"); // DEBUG
         cp.add(tfName);
         lName.setBounds(310, 248, 40 ,24);
         lName.setText("Name");
@@ -107,18 +109,24 @@ public class FlunkyGUI extends JFrame implements KeyListener {
             });
         bStart.setVisible(false);
         cp.add(bStart);
-        lImageField.setBounds(8, 56, 768, 360);
+        lImageField.setBounds(45, 56, 680, 360);
         lImageField.setText("");
         lImageField.setVisible(false);
         cp.add(lImageField);
         p1score.setBounds(8, p1scoreY, 24, p1scoreHeight);
-        p1score.setBackground(Color.BLACK);
+        p1score.setBackground(Color.GREEN);
         p1score.setVisible(false);
         cp.add(p1score);
-        p2score.setBounds(750, p2scoreY, 24, p2scoreHeight);
-        p2score.setBackground(Color.BLACK);
+        lP1Name.setBounds(8, 420, 100, 14);
+        lP1Name.setVisible(true);
+        cp.add(lP1Name);
+        p2score.setBounds(740, p2scoreY, 24, p2scoreHeight);
+        p2score.setBackground(Color.RED);
         p2score.setVisible(false);
         cp.add(p2score);
+        lP2Name.setBounds(740, 420, 100, 14);
+        lP2Name.setVisible(true);
+        cp.add(lP2Name);
         tfInput.setBounds(176, 504, 296, 32);
         tfInput.setVisible(false);
         tfInput.addKeyListener(this);
@@ -172,11 +180,15 @@ public class FlunkyGUI extends JFrame implements KeyListener {
         tfInput.setVisible(true);
         bSubmit1.setVisible(true);
         lInfo.setVisible(true);
+        lP1Name.setVisible(true);
+        lP2Name.setVisible(true);
         
         sleep(10);
         client.send("NAME " + tfName.getText());
-        // System.out.println("NAME " + tfName.getText()); // DEBUG
         p1name = tfName.getText();
+        lP1Name.setText(p1name);
+        
+        lImageField.setIcon(new ImageIcon("img/connect.png"));
     }
 
     /**
@@ -198,6 +210,8 @@ public class FlunkyGUI extends JFrame implements KeyListener {
         lInfo.setVisible(false);
         p1score.setVisible(false);
         p2score.setVisible(false);
+        lP1Name.setVisible(false);
+        lP2Name.setVisible(false);
         
         client.close(); // close connection
         client = null;
@@ -209,7 +223,6 @@ public class FlunkyGUI extends JFrame implements KeyListener {
      */
     public void bStart_ActionPerformed(ActionEvent evt) {
         if(connected()) client.send("START");
-        // System.out.println("START"); // DEBUG
         tfInput.requestFocusInWindow(); // focus on tfInput
     }
 
@@ -305,6 +318,7 @@ public class FlunkyGUI extends JFrame implements KeyListener {
      */
     public void setP2Name(String name) {
         this.p2name = name;
+        lP2Name.setText(name);
     }
 
     /**
@@ -333,5 +347,14 @@ public class FlunkyGUI extends JFrame implements KeyListener {
      */
     public boolean connected() {
         return client != null;
+    }
+    
+    /**
+     * Changes the icon of lImageField to the supplied image in the img/ directory
+     * 
+     * @param imgName   the new image
+     */
+    public void setImage(String imgName) {
+        lImageField.setIcon(new ImageIcon("img/" + imgName));
     }
 }
