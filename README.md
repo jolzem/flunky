@@ -20,6 +20,20 @@ git clone https://github.com/jolzem/flunky.git
 
 Feel free to distribute the flunky-client folder to the people you want to play with.
 
+### Please add words and graphics by yourself!
+
+In the flunky-client/ folder create an "img" directory and add the following images:
+- connect.png (only player 1)
+- start.png (both players in idle position)
+- p1drink.png (p1 drinking, p2 idle, bottle fallen)
+- p1throw.png (p1 throwing, p2 idle, bottle standing)
+- p2drink.png (p1 idle, p2 drinking, bottle fallen)
+- p2throw.png (p1 idle, p2 throwing, bottle standing)
+
+To add words, edit the FlunkyServer.java file on line 58:
+
+Add your words by adding `, "<your word>"` at the end of the line **before** the `};`
+
 ## Usage
 
 To run Flunkyball, open the package.bluej files in the flunky and flunk-client folders.
@@ -58,4 +72,4 @@ Thanks to the original authors of the NRW Abitur in Networking classes for provi
 
 ## Future Goals
 
-- Add graphics/images to visualize gameplay and to _fill the void_.
+- ~~Add graphics/images to visualize gameplay and to _fill the void_.~~
