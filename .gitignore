@@ -28,3 +28,6 @@ doc/
 
 # graphics
 flunky-client/img/
+
+# generated README
+README.TXT
